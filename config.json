@@ -1,13 +1,25 @@
 {
-  "prefixes": {},
-  "language": "en",
-  "userLanguages": {},
-  "modActions": {},
-  "warns": {},
-  "tickets": {
-    "systems": {},
-    "counters": {},
-    "activeTickets": {}
+  "modActions": {
+    "GUILD_ID": [
+      {
+        "type": "ban",
+        "userId": "USER_ID",
+        "moderatorId": "MOD_ID",
+        "reason": "Spamming",
+        "date": "ISO_DATE",
+        "deletedMessages": 7
+      }
+    ]
   },
-  "welcomeSystems": {}
+  "warns": {
+    "GUILD_ID": {
+      "USER_ID": [
+        {
+          "reason": "Bad language",
+          "moderatorId": "MOD_ID",
+          "date": "ISO_DATE"
+        }
+      ]
+    }
+  }
 }
