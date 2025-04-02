@@ -1,0 +1,21 @@
+{
+  "help": {
+    "title": "Help Center",
+    "description": "Total: {count} commands available",
+    "category": "Category: {category}",
+    "command": "Command",
+    "description_text": "Description",
+    "no_description": "No description",
+    "footer": "Requested by {user}",
+    "moderation": "Moderation",
+    "ticket": "Tickets",
+    "welcome": "Welcomes",
+    "utility": "Utilities",
+    "fun": "Fun",
+    "info": "Information"
+  },
+  "language": {
+    "updated": "Language updated to English",
+    "current": "Your current language is: English"
+  }
+}
