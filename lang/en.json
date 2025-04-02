@@ -1,18 +1,31 @@
 {
-  "help": {
-    "title": "Help Center",
-    "description": "Total: {count} commands available",
-    "category": "Category: {category}",
-    "command": "Command",
-    "description_text": "Description",
-    "no_description": "No description",
-    "footer": "Requested by {user}",
-    "moderation": "Moderation",
-    "ticket": "Tickets",
-    "welcome": "Welcomes",
-    "utility": "Utilities",
-    "fun": "Fun",
-    "info": "Information"
+  "cooldown": {
+    "message": "⏳ Wait {time} seconds before using `/{command}` again."
+  },
+  "error": {
+    "title": "❌ Command Error",
+    "description": "An error occurred while executing this command.",
+    "footer": "Command: /{command}",
+    "generic": "❌ An error occurred while processing your request"
+  },
+  "welcome": {
+    "title": "Welcome to {server}!"
+  },
+  "ticket": {
+    "exists": "❌ You already have an open ticket: {channel}",
+    "title": "Ticket #{number}",
+    "description": "Hello {user}, support team will assist you shortly.\n\n**Please describe your issue:**",
+    "user": "User",
+    "created": "Created on",
+    "joined": "Joined",
+    "footer": "Type your question here",
+    "close_button": "Close Ticket",
+    "claim_button": "Claim Ticket",
+    "created_response": "✅ Ticket created: {channel}",
+    "closed_title": "Ticket Closed",
+    "closed_by": "Closed by {user}",
+    "claimed_title": "Ticket Claimed",
+    "claimed_by": "{user} has claimed this ticket"
   },
   "language": {
     "updated": "Language updated to English",
