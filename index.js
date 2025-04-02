@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, ActivityType } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 
@@ -9,7 +9,6 @@ const { Routes } = require('discord-api-types/v10');
 const configPath = path.join(__dirname, 'config.json');
 let config = {};
 
-// Inicializar configuración si no existe
 if (fs.existsSync(configPath)) {
   try {
     config = JSON.parse(fs.readFileSync(configPath));
@@ -58,7 +57,7 @@ client.cooldowns = new Collection();
 
 // Función mejorada para cargar comandos
 async function loadCommands() {
-  const commandCategories = ['moderation', 'ticket', 'welcome', 'utility', 'fun', 'info'];
+  const commandCategories = ['moderation', 'ticket', 'welcome', 'utility', 'fun', 'info', 'help'];
   const commands = [];
 
   for (const category of commandCategories) {
@@ -66,7 +65,12 @@ async function loadCommands() {
       const commandModule = require(`./commands/${category}`);
       
       if (Array.isArray(commandModule)) {
-        commands.push(...commandModule);
+        // Asignar categoría a cada comando
+        const categorizedCommands = commandModule.map(cmd => {
+          cmd.category = category;
+          return cmd;
+        });
+        commands.push(...categorizedCommands);
         console.log(`✅ ${category}.js cargado (${commandModule.length} comandos)`);
       } else {
         console.warn(`⚠ ${category}.js no exporta un array válido`);
@@ -75,7 +79,6 @@ async function loadCommands() {
       if (error.code === 'MODULE_NOT_FOUND') {
         console.warn(`⚠ ${category}.js no encontrado, creando archivo vacío`);
         fs.writeFileSync(`./commands/${category}.js`, 'module.exports = [];');
-        commands.push(...[]);
       } else {
         console.error(`❌ Error al cargar ${category}.js:`, error);
       }
@@ -112,15 +115,15 @@ client.once('ready', async () => {
       );
       console.log(`✅ Comandos actualizados en servidor de desarrollo (ID: ${process.env.DEV_GUILD_ID})`);
     }
+
+    // Establecer estado del bot
+    client.user.setPresence({
+      activities: [{ name: '/help', type: ActivityType.Listening }],
+      status: 'online'
+    });
   } catch (error) {
     console.error('❌ Error al actualizar comandos:', error);
   }
-
-  // Establecer estado del bot
-  client.user.setPresence({
-    activities: [{ name: '/help', type: ActivityType.Listening }],
-    status: 'online'
-  });
 });
 
 // Manejador de comandos slash
