@@ -1,0 +1,21 @@
+{
+  "help": {
+    "title": "Centro de Ayuda",
+    "description": "Total: {count} comandos disponibles",
+    "category": "Categoría: {category}",
+    "command": "Comando",
+    "description_text": "Descripción",
+    "no_description": "Sin descripción",
+    "footer": "Solicitado por {user}",
+    "moderation": "Moderación",
+    "ticket": "Tickets",
+    "welcome": "Bienvenidas",
+    "utility": "Utilidades",
+    "fun": "Diversión",
+    "info": "Información"
+  },
+  "language": {
+    "updated": "Idioma actualizado a español",
+    "current": "Tu idioma actual es: español"
+  }
+}
