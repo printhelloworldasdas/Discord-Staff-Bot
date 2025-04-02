@@ -1,18 +1,31 @@
 {
-  "help": {
-    "title": "Centro de Ayuda",
-    "description": "Total: {count} comandos disponibles",
-    "category": "Categoría: {category}",
-    "command": "Comando",
-    "description_text": "Descripción",
-    "no_description": "Sin descripción",
-    "footer": "Solicitado por {user}",
-    "moderation": "Moderación",
-    "ticket": "Tickets",
-    "welcome": "Bienvenidas",
-    "utility": "Utilidades",
-    "fun": "Diversión",
-    "info": "Información"
+  "cooldown": {
+    "message": "⏳ Espera {time} segundos antes de usar `/{command}` de nuevo."
+  },
+  "error": {
+    "title": "❌ Error en el comando",
+    "description": "Ocurrió un error al ejecutar este comando.",
+    "footer": "Comando: /{command}",
+    "generic": "❌ Ocurrió un error al procesar tu solicitud"
+  },
+  "welcome": {
+    "title": "¡Bienvenido a {server}!"
+  },
+  "ticket": {
+    "exists": "❌ Ya tienes un ticket abierto: {channel}",
+    "title": "Ticket #{number}",
+    "description": "Hola {user}, el equipo de soporte te ayudará pronto.\n\n**Por favor describe tu problema:**",
+    "user": "Usuario",
+    "created": "Creado el",
+    "joined": "Se unió",
+    "footer": "Escribe tu pregunta aquí",
+    "close_button": "Cerrar Ticket",
+    "claim_button": "Tomar Ticket",
+    "created_response": "✅ Ticket creado: {channel}",
+    "closed_title": "Ticket Cerrado",
+    "closed_by": "Cerrado por {user}",
+    "claimed_title": "Ticket Reclamado",
+    "claimed_by": "{user} ha tomado este ticket"
   },
   "language": {
     "updated": "Idioma actualizado a español",
