@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = [
     {
@@ -7,7 +7,7 @@ module.exports = [
             .setDescription('Muestra todos los comandos disponibles')
             .addStringOption(option =>
                 option.setName('categoria')
-                    .setDescription('Categoría específica de comandos')
+                    .setDescription('Filtrar por categoría')
                     .addChoices(
                         { name: 'Moderación', value: 'moderation' },
                         { name: 'Tickets', value: 'ticket' },
@@ -17,60 +17,71 @@ module.exports = [
                         { name: 'Información', value: 'info' }
                     )),
         async execute(interaction, client) {
-            const category = interaction.options.getString('categoria');
+            const categoryFilter = interaction.options.getString('categoria');
             const commands = client.commands;
 
             // Organizar comandos por categoría
-            const categories = {
-                moderation: [],
-                ticket: [],
-                welcome: [],
-                utility: [],
-                fun: [],
-                info: []
-            };
-
+            const categories = {};
             commands.forEach(cmd => {
-                const cmdCategory = cmd.data.name.split('-')[0] || 'utility';
-                if (categories[cmdCategory]) {
-                    categories[cmdCategory].push(cmd.data);
-                } else {
-                    categories.utility.push(cmd.data);
+                const category = cmd.category || 'otros';
+                if (!categories[category]) {
+                    categories[category] = [];
                 }
+                categories[category].push(cmd.data);
             });
 
-            // Si se solicita una categoría específica
-            if (category && categories[category]) {
+            // Si se filtró por categoría
+            if (categoryFilter && categories[categoryFilter]) {
                 const embed = new EmbedBuilder()
-                    .setColor('#0099ff')
-                    .setTitle(`Comandos de ${category.charAt(0).toUpperCase() + category.slice(1)}`)
-                    .setDescription(`Aquí tienes todos los comandos disponibles en la categoría ${category}`)
+                    .setColor('#5865F2')
+                    .setTitle(`📚 Comandos de ${categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)}`)
+                    .setDescription(`Total: ${categories[categoryFilter].length} comandos`)
                     .addFields(
-                        categories[category].map(cmd => ({
+                        categories[categoryFilter].map(cmd => ({
                             name: `/${cmd.name}`,
                             value: cmd.description || 'Sin descripción',
                             inline: true
                         }))
-                    )
-                    .setFooter({ text: `Total: ${categories[category].length} comandos` });
+                    .setFooter({ text: `Usa /help para ver todas las categorías` });
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
             // Mostrar todas las categorías
             const embed = new EmbedBuilder()
-                .setColor('#0099ff')
-                .setTitle('📚 Todos los comandos disponibles')
-                .setDescription('Usa `/help [categoría]` para ver comandos específicos')
+                .setColor('#5865F2')
+                .setTitle('📚 Centro de Ayuda')
+                .setDescription(`Total: ${commands.size} comandos disponibles\nUsa \`/help [categoría]\` para filtrar`)
                 .addFields(
-                    Object.entries(categories).map(([cat, cmds]) => ({
-                        name: `${cat.charAt(0).toUpperCase() + cat.slice(1)} (${cmds.length})`,
-                        value: cmds.slice(0, 3).map(c => `\`/${c.name}\``).join(', ') + (cmds.length > 3 ? `... +${cmds.length - 3} más` : ''),
-                        inline: true
+                    Object.entries(categories).map(([category, cmds]) => ({
+                        name: `${category.charAt(0).toUpperCase() + category.slice(1)} (${cmds.length})`,
+                        value: cmds.map(c => `\`/${c.name}\``).join(', '),
+                        inline: false
                     }))
-                .setFooter({ text: `Total: ${commands.size} comandos disponibles` });
+                .setFooter({ text: `Solicitado por ${interaction.user.username}` })
+                .setTimestamp();
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            // Botones para categorías
+            const buttons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('help_moderation')
+                    .setLabel('Moderación')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('help_ticket')
+                    .setLabel('Tickets')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('help_welcome')
+                    .setLabel('Bienvenidas')
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            await interaction.reply({ 
+                embeds: [embed], 
+                components: [buttons],
+                ephemeral: true 
+            });
         }
     }
 ];
