@@ -1,1 +1,13 @@
-
+{
+  "prefixes": {},
+  "language": "en",
+  "userLanguages": {},
+  "modActions": {},
+  "warns": {},
+  "tickets": {
+    "systems": {},
+    "counters": {},
+    "activeTickets": {}
+  },
+  "welcomeSystems": {}
+}
