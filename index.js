@@ -1,9 +1,23 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
-const mongoose = require('mongoose');
-const WelcomeConfig = require('./models/WelcomeConfig');
+
+// Configuración de almacenamiento local
+const configPath = path.join(__dirname, 'config.json');
+let config = {};
+
+if (fs.existsSync(configPath)) {
+  config = JSON.parse(fs.readFileSync(configPath));
+} else {
+  fs.writeFileSync(configPath, JSON.stringify({ welcomeConfigs: {}, ticketCounters: {} }, null, 2));
+}
+
+function saveConfig() {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
 
 const client = new Client({
   intents: [
@@ -18,15 +32,10 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.User, Partials.GuildMember, Partials.Reaction]
 });
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
-// Import command handlers
+// Importar comandos
 const moderationCommands = require('./commands/moderation');
 const ticketCommands = require('./commands/ticket');
 const welcomeCommands = require('./commands/welcome');
@@ -34,7 +43,7 @@ const utilityCommands = require('./commands/utility');
 const funCommands = require('./commands/fun');
 const infoCommands = require('./commands/info');
 
-// Register commands
+// Registrar comandos
 const commands = [
   ...moderationCommands,
   ...ticketCommands,
@@ -48,26 +57,26 @@ commands.forEach(command => {
   client.commands.set(command.data.name, command);
 });
 
-// Bot ready event
+// Evento ready
 client.once('ready', async () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`Bot conectado como ${client.user.tag}`);
   
-  // Register slash commands
+  // Registrar comandos slash
   const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   
   try {
-    console.log('Started refreshing application (/) commands.');
+    console.log('Actualizando comandos (/)...');
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands.map(command => command.data.toJSON()) },
     );
-    console.log('Successfully reloaded application (/) commands.');
+    console.log('Comandos actualizados correctamente.');
   } catch (error) {
     console.error(error);
   }
 });
 
-// Command handler
+// Manejador de comandos
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
@@ -75,56 +84,56 @@ client.on('interactionCreate', async interaction => {
   if (!command) return;
 
   try {
-    await command.execute(interaction, client);
+    await command.execute(interaction, client, config, saveConfig);
   } catch (error) {
     console.error(error);
     await interaction.reply({ 
-      content: 'There was an error while executing this command!', 
+      content: '¡Hubo un error al ejecutar este comando!', 
       ephemeral: true 
     });
   }
 });
 
-// Advanced Welcome System
+// Sistema de bienvenida avanzado
 client.on('guildMemberAdd', async member => {
   try {
-    const config = await WelcomeConfig.findOne({ guildId: member.guild.id });
-    if (!config) return;
+    const guildConfig = config.welcomeConfigs[member.guild.id];
+    if (!guildConfig) return;
 
-    const channel = member.guild.channels.cache.get(config.channelId);
+    const channel = member.guild.channels.cache.get(guildConfig.channelId);
     if (!channel) return;
 
-    // Replace placeholders in the message
-    let welcomeMessage = config.message
+    // Reemplazar placeholders
+    let welcomeMessage = guildConfig.message
       .replace(/{user}/g, member.user.toString())
       .replace(/{username}/g, member.user.username)
       .replace(/{server}/g, member.guild.name)
       .replace(/{membercount}/g, member.guild.memberCount);
 
-    // Create embed if enabled
-    if (config.embedEnabled) {
+    // Crear embed si está activado
+    if (guildConfig.embedEnabled) {
       const embed = new EmbedBuilder()
-        .setColor(config.embedColor || '#00ff00')
-        .setTitle(config.embedTitle || `Welcome to ${member.guild.name}!`)
+        .setColor(guildConfig.embedColor || '#00ff00')
+        .setTitle(guildConfig.embedTitle || `¡Bienvenido a ${member.guild.name}!`)
         .setDescription(welcomeMessage)
         .setThumbnail(member.user.displayAvatarURL())
         .setTimestamp();
 
-      if (config.embedImage) embed.setImage(config.embedImage);
+      if (guildConfig.embedImage) embed.setImage(guildConfig.embedImage);
 
       await channel.send({ 
-        content: config.pingUser ? member.user.toString() : null,
+        content: guildConfig.pingUser ? member.user.toString() : null,
         embeds: [embed] 
       });
     } else {
       await channel.send({
-        content: `${config.pingUser ? member.user.toString() + ' ' : ''}${welcomeMessage}`
+        content: `${guildConfig.pingUser ? member.user.toString() + ' ' : ''}${welcomeMessage}`
       });
     }
 
-    // Assign roles if specified
-    if (config.roles.length > 0) {
-      for (const roleId of config.roles) {
+    // Asignar roles si están configurados
+    if (guildConfig.roles && guildConfig.roles.length > 0) {
+      for (const roleId of guildConfig.roles) {
         const role = member.guild.roles.cache.get(roleId);
         if (role) {
           await member.roles.add(role).catch(console.error);
@@ -132,17 +141,23 @@ client.on('guildMemberAdd', async member => {
       }
     }
   } catch (error) {
-    console.error('Error in welcome system:', error);
+    console.error('Error en el sistema de bienvenida:', error);
   }
 });
 
-// Enhanced Ticket System
+// Sistema de tickets mejorado
 client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
   
-  // Ticket creation
+  // Creación de ticket
   if (interaction.customId === 'create_ticket') {
     try {
+      // Contador de tickets
+      if (!config.ticketCounters) config.ticketCounters = {};
+      if (!config.ticketCounters[interaction.guild.id]) config.ticketCounters[interaction.guild.id] = 0;
+      config.ticketCounters[interaction.guild.id]++;
+      saveConfig();
+
       const ticketCategory = interaction.guild.channels.cache.find(
         c => c.type === ChannelType.GuildCategory && c.name === 'Tickets'
       ) || await interaction.guild.channels.create({
@@ -156,8 +171,9 @@ client.on('interactionCreate', async interaction => {
         ],
       });
 
+      const ticketNumber = config.ticketCounters[interaction.guild.id];
       const ticketChannel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
+        name: `ticket-${ticketNumber}`,
         type: ChannelType.GuildText,
         parent: ticketCategory,
         permissionOverwrites: [
@@ -178,46 +194,50 @@ client.on('interactionCreate', async interaction => {
 
       const ticketEmbed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle('Ticket Created')
-        .setDescription(`Hello ${interaction.user.username}, support will be with you shortly.\nPlease describe your issue in detail.`)
+        .setTitle(`Ticket #${ticketNumber}`)
+        .setDescription(`Hola ${interaction.user.username}, el equipo de soporte te atenderá pronto.\nPor favor describe tu problema con detalle.`)
         .addFields(
-          { name: 'User', value: interaction.user.toString(), inline: true },
-          { name: 'Account Created', value: `<t:${Math.floor(interaction.user.createdTimestamp / 1000)}:R>`, inline: true },
-          { name: 'Joined Server', value: `<t:${Math.floor((interaction.member.joinedTimestamp || Date.now()) / 1000)}:R>`, inline: true }
+          { name: 'Usuario', value: interaction.user.toString(), inline: true },
+          { name: 'Cuenta creada', value: `<t:${Math.floor(interaction.user.createdTimestamp / 1000)}:R>`, inline: true },
+          { name: 'Se unió al servidor', value: `<t:${Math.floor((interaction.member.joinedTimestamp || Date.now()) / 1000)}:R>`, inline: true }
         )
         .setTimestamp();
 
-      const closeButton = new ActionRowBuilder().addComponents(
+      const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('close_ticket')
-          .setLabel('Close Ticket')
-          .setStyle(ButtonStyle.Danger)
+          .setLabel('Cerrar Ticket')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId('claim_ticket')
+          .setLabel('Tomar Ticket')
+          .setStyle(ButtonStyle.Primary)
       );
 
       await ticketChannel.send({ 
         content: `${interaction.user}, <@&${process.env.STAFF_ROLE_ID}>`,
         embeds: [ticketEmbed],
-        components: [closeButton]
+        components: [buttons]
       });
 
       await interaction.reply({ 
-        content: `Your ticket has been created: ${ticketChannel}`, 
+        content: `Tu ticket ha sido creado: ${ticketChannel}`, 
         ephemeral: true 
       });
     } catch (error) {
-      console.error('Ticket creation error:', error);
+      console.error('Error al crear ticket:', error);
       await interaction.reply({
-        content: 'An error occurred while creating your ticket.',
+        content: 'Ocurrió un error al crear tu ticket.',
         ephemeral: true
       });
     }
   }
 
-  // Ticket closing
+  // Cerrar ticket
   if (interaction.customId === 'close_ticket') {
     if (!interaction.channel.name.startsWith('ticket-')) {
       return interaction.reply({ 
-        content: 'This is not a ticket channel!', 
+        content: '¡Este no es un canal de ticket!', 
         ephemeral: true 
       });
     }
@@ -225,19 +245,51 @@ client.on('interactionCreate', async interaction => {
     try {
       const transcriptEmbed = new EmbedBuilder()
         .setColor('#ff0000')
-        .setTitle('Ticket Closed')
-        .setDescription(`This ticket was closed by ${interaction.user.username}`)
+        .setTitle('Ticket Cerrado')
+        .setDescription(`Este ticket fue cerrado por ${interaction.user.username}`)
         .setTimestamp();
 
       await interaction.channel.send({ embeds: [transcriptEmbed] });
       
-      // Add a delay before deleting
+      // Esperar antes de eliminar
       await new Promise(resolve => setTimeout(resolve, 5000));
       await interaction.channel.delete();
     } catch (error) {
-      console.error('Ticket closing error:', error);
+      console.error('Error al cerrar ticket:', error);
       await interaction.reply({
-        content: 'An error occurred while closing the ticket.',
+        content: 'Ocurrió un error al cerrar el ticket.',
+        ephemeral: true
+      });
+    }
+  }
+
+  // Tomar ticket
+  if (interaction.customId === 'claim_ticket') {
+    if (!interaction.channel.name.startsWith('ticket-')) {
+      return interaction.reply({ 
+        content: '¡Este no es un canal de ticket!', 
+        ephemeral: true 
+      });
+    }
+
+    try {
+      await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true
+      });
+
+      const claimEmbed = new EmbedBuilder()
+        .setColor('#00ff00')
+        .setTitle('Ticket Reclamado')
+        .setDescription(`Este ticket ha sido tomado por ${interaction.user}`)
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [claimEmbed] });
+    } catch (error) {
+      console.error('Error al tomar ticket:', error);
+      await interaction.reply({
+        content: 'Ocurrió un error al tomar este ticket.',
         ephemeral: true
       });
     }
