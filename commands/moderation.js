@@ -227,7 +227,7 @@ module.exports = [
             }
         }
     },
-    // Comando /warns (ver advertencias)
+    // Comando /warns (ver advertencias) - VERSIÓN CORREGIDA
     {
         data: new SlashCommandBuilder()
             .setName('warns')
@@ -256,9 +256,10 @@ module.exports = [
                 .setDescription(`Total: ${warnCount} advertencia(s)`);
 
             userWarns.forEach((warn, index) => {
+                const timestamp = Math.floor(new Date(warn.date).getTime() / 1000);
                 embed.addFields({
                     name: `Advertencia #${index + 1}`,
-                    value: `**Razón:** ${warn.reason}\n**Moderador:** <@${warn.moderator}>\n**Fecha:** <t:${Math.floor(new Date(warn.date).getTime() / 1000}:f>`,
+                    value: `**Razón:** ${warn.reason}\n**Moderador:** <@${warn.moderator}>\n**Fecha:** <t:${timestamp}:f>`,
                     inline: false
                 });
             });
