@@ -5,29 +5,34 @@ const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRow
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 
-// Configuración de almacenamiento local
-const configPath = path.join(__dirname, 'config.json');
-let config = {};
+// Night ASCII Art
+const nightAscii = `
+\x1b[35m
+███╗   ██╗██╗ ██████╗ ██╗  ██╗████████╗
+████╗  ██║██║██╔════╝ ██║  ██║╚══██╔══╝
+██╔██╗ ██║██║██║  ███╗███████║   ██║   
+██║╚██╗██║██║██║   ██║██╔══██║   ██║   
+██║ ╚████║██║╚██████╔╝██║  ██║   ██║   
+╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
+\x1b[0m
+`;
 
-// Cargar archivos de idioma
+// Language system
 const languages = {
   es: require('./lang/es.json'),
   en: require('./lang/en.json')
 };
 
-// Función para obtener textos traducidos
 function t(key, interaction, variables = {}) {
   const lang = config.userLanguages?.[interaction.user.id] || config.language || 'es';
   let value = languages[lang];
   
-  // Navegar por el objeto anidado (ej: 'help.title')
   const keys = key.split('.');
   for (const k of keys) {
     value = value?.[k];
     if (!value) break;
   }
   
-  // Reemplazar variables si existe el valor
   if (value) {
     for (const [varKey, varValue] of Object.entries(variables)) {
       value = value.replace(new RegExp(`{${varKey}}`, 'g'), varValue);
@@ -35,12 +40,14 @@ function t(key, interaction, variables = {}) {
     return value;
   }
   
-  // Fallback a español si no existe la traducción
   console.warn(`Translation missing for key '${key}' in language '${lang}'`);
   return key;
 }
 
-// Inicializar configuración
+// Config system
+const configPath = path.join(__dirname, 'config.json');
+let config = {};
+
 function initializeDefaultConfig() {
   const defaultConfig = {
     welcomeConfigs: {},
@@ -49,31 +56,29 @@ function initializeDefaultConfig() {
     warns: {},
     tickets: {},
     prefixes: {},
-    language: 'es', // Idioma por defecto
-    userLanguages: {} // Preferencias de idioma por usuario
+    language: 'es',
+    userLanguages: {}
   };
   fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
   return defaultConfig;
 }
 
-// Guardar configuración
 function saveConfig() {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
-// Cargar o inicializar configuración
 if (fs.existsSync(configPath)) {
   try {
     config = JSON.parse(fs.readFileSync(configPath));
   } catch (error) {
-    console.error('Error al leer config.json, creando uno nuevo:', error);
+    console.error('Error reading config.json:', error);
     config = initializeDefaultConfig();
   }
 } else {
   config = initializeDefaultConfig();
 }
 
-// Crear cliente de Discord
+// Create Discord client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -87,11 +92,10 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.User, Partials.GuildMember, Partials.Reaction]
 });
 
-// Colecciones para comandos y cooldowns
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
-// Función mejorada para cargar comandos
+// Command loader
 async function loadCommands() {
   const commandCategories = ['moderation', 'ticket', 'welcome', 'utility', 'fun', 'info', 'help', 'language'];
   const commands = [];
@@ -101,7 +105,6 @@ async function loadCommands() {
       const commandModule = require(`./commands/${category}`);
       
       if (Array.isArray(commandModule)) {
-        // Asignar categoría a cada comando
         const categorizedCommands = commandModule.map(cmd => {
           cmd.category = category;
           return cmd;
@@ -124,10 +127,14 @@ async function loadCommands() {
   return commands;
 }
 
-// Evento Ready
+// Ready event
 client.once('ready', async () => {
-  console.log(`🚀 Bot connected as ${client.user.tag}`);
-  console.log(`🔄 Syncing commands with ${client.guilds.cache.size} servers...`);
+  console.clear();
+  console.log(nightAscii);
+  console.log(`\x1b[36m========================================\x1b[0m`);
+  console.log(`\x1b[33m🌙 Night Bot v2.0 - Multilingual Discord Bot\x1b[0m`);
+  console.log(`\x1b[32m✅ Logged in as ${client.user.tag}\x1b[0m`);
+  console.log(`\x1b[36m========================================\x1b[0m`);
 
   try {
     const commands = await loadCommands();
@@ -143,7 +150,6 @@ client.once('ready', async () => {
     );
     console.log('✅ Commands updated globally');
     
-    // Sync with dev server if specified
     if (process.env.DEV_GUILD_ID) {
       await rest.put(
         Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.DEV_GUILD_ID),
@@ -152,7 +158,6 @@ client.once('ready', async () => {
       console.log(`✅ Commands updated in dev server (ID: ${process.env.DEV_GUILD_ID})`);
     }
 
-    // Set bot presence
     client.user.setPresence({
       activities: [{ name: '/help', type: ActivityType.Listening }],
       status: 'online'
@@ -169,7 +174,7 @@ client.on('interactionCreate', async interaction => {
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
-  // Cooldown handling
+  // Cooldown system
   if (!client.cooldowns.has(command.data.name)) {
     client.cooldowns.set(command.data.name, new Collection());
   }
@@ -221,7 +226,6 @@ client.on('guildMemberAdd', async member => {
     const channel = member.guild.channels.cache.get(guildConfig.channelId);
     if (!channel) return;
 
-    // Replace placeholders
     const replacements = {
       '{user}': member.user.toString(),
       '{username}': member.user.username,
@@ -235,7 +239,6 @@ client.on('guildMemberAdd', async member => {
       welcomeMessage = welcomeMessage.replace(new RegExp(key, 'g'), value);
     }
 
-    // Create embed if enabled
     if (guildConfig.embedEnabled) {
       const embed = new EmbedBuilder()
         .setColor(guildConfig.embedColor || '#00FF00')
@@ -257,7 +260,6 @@ client.on('guildMemberAdd', async member => {
       });
     }
 
-    // Assign roles if configured
     if (guildConfig.roles && guildConfig.roles.length > 0) {
       const rolesToAdd = guildConfig.roles
         .map(id => member.guild.roles.cache.get(id))
@@ -277,12 +279,10 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isButton() && !interaction.isModalSubmit()) return;
 
   try {
-    // Ticket creation
     if (interaction.customId === 'create_ticket') {
       const guildConfig = config.tickets?.[interaction.guild.id];
       if (!guildConfig?.enabled) return;
 
-      // Check for existing ticket
       const existingTicket = interaction.guild.channels.cache.find(
         c => c.name.startsWith('ticket-') && 
              c.topic?.includes(`UserID:${interaction.user.id}`)
@@ -295,7 +295,6 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      // Create category if needed
       let ticketCategory = guildConfig.categoryId 
         ? interaction.guild.channels.cache.get(guildConfig.categoryId)
         : interaction.guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === 'Tickets');
@@ -319,7 +318,6 @@ client.on('interactionCreate', async interaction => {
         saveConfig();
       }
 
-      // Create ticket channel
       if (!config.ticketCounters[interaction.guild.id]) {
         config.ticketCounters[interaction.guild.id] = 0;
       }
@@ -348,7 +346,6 @@ client.on('interactionCreate', async interaction => {
         ],
       });
 
-      // Ticket message
       const embed = new EmbedBuilder()
         .setColor('#0099FF')
         .setTitle(t('ticket.title', interaction, { number: ticketNumber }))
@@ -397,7 +394,6 @@ client.on('interactionCreate', async interaction => {
       });
     }
 
-    // Close ticket
     if (interaction.customId === 'close_ticket' && interaction.channel.name.startsWith('ticket-')) {
       const embed = new EmbedBuilder()
         .setColor('#FF0000')
@@ -409,7 +405,6 @@ client.on('interactionCreate', async interaction => {
       setTimeout(() => interaction.channel.delete(), 5000);
     }
 
-    // Claim ticket
     if (interaction.customId === 'claim_ticket' && interaction.channel.name.startsWith('ticket-')) {
       await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
         ViewChannel: true,
