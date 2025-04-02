@@ -2,22 +2,19 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('clearwarns')
+        .setName('clearwarnings')
         .setDescription('Clear all warnings from a user')
-        .addUserOption(option =>
+        .addUserOption(option => 
             option.setName('user')
-                .setDescription('The user to clear warnings from')
+                .setDescription('User to clear warnings from')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     
-    aliases: ['removewarns', 'cw'],
-    category: 'moderation',
-    cooldown: 5,
-
     async execute(interaction, client, config, saveConfig) {
         const user = interaction.options.getUser('user');
 
-        if (!config.warns || !config.warns[interaction.guild.id] || !config.warns[interaction.guild.id][user.id]) {
+        // Check if user has warnings
+        if (!config.warns?.[interaction.guild.id]?.[user.id]?.length) {
             return interaction.reply({ 
                 content: `ℹ ${user.tag} has no warnings to clear`,
                 ephemeral: true 
@@ -25,9 +22,12 @@ module.exports = {
         }
 
         const warnCount = config.warns[interaction.guild.id][user.id].length;
+        
+        // Clear warnings
         delete config.warns[interaction.guild.id][user.id];
         saveConfig();
 
+        // Create embed
         const embed = new EmbedBuilder()
             .setColor('#00FF00')
             .setTitle('✅ Warnings Cleared')
