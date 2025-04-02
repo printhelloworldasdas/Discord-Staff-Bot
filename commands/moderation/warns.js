@@ -2,40 +2,40 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('warns')
+        .setName('warnings')
         .setDescription('Check a user\'s warnings')
-        .addUserOption(option =>
+        .addUserOption(option => 
             option.setName('user')
-                .setDescription('The user to check')
+                .setDescription('User to check')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     
-    aliases: ['warnings', 'checkwarns'],
-    category: 'moderation',
-
     async execute(interaction, client, config) {
         const user = interaction.options.getUser('user');
 
-        if (!config.warns || !config.warns[interaction.guild.id] || !config.warns[interaction.guild.id][user.id]) {
+        // Check if user has any warnings
+        if (!config.warns?.[interaction.guild.id]?.[user.id]?.length) {
             return interaction.reply({ 
                 content: `ℹ ${user.tag} has no warnings`,
                 ephemeral: true 
             });
         }
 
-        const userWarns = config.warns[interaction.guild.id][user.id];
-        const warnCount = userWarns.length;
+        const warnings = config.warns[interaction.guild.id][user.id];
+        const warnCount = warnings.length;
 
+        // Create embed
         const embed = new EmbedBuilder()
             .setColor('#FFFF00')
             .setTitle(`⚠ Warnings for ${user.tag}`)
             .setDescription(`Total: ${warnCount} warning(s)`);
 
-        userWarns.forEach((warn, index) => {
-            const timestamp = Math.floor(new Date(warn.date).getTime() / 1000);
+        // Add each warning as a field
+        warnings.forEach((warn, index) => {
+            const date = new Date(warn.date);
             embed.addFields({
                 name: `Warning #${index + 1}`,
-                value: `**Reason:** ${warn.reason}\n**Moderator:** <@${warn.moderator}>\n**Date:** <t:${timestamp}:f>`,
+                value: `**Reason:** ${warn.reason}\n**By:** <@${warn.moderatorId}>\n**Date:** <t:${Math.floor(date.getTime()/1000)}:f>`,
                 inline: false
             });
         });
