@@ -4,20 +4,16 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('warn')
         .setDescription('Warn a user')
-        .addUserOption(option =>
+        .addUserOption(option => 
             option.setName('user')
-                .setDescription('The user to warn')
+                .setDescription('User to warn')
                 .setRequired(true))
-        .addStringOption(option =>
+        .addStringOption(option => 
             option.setName('reason')
-                .setDescription('Reason for the warning')
+                .setDescription('Reason for warning')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     
-    aliases: ['warning', 'w'],
-    category: 'moderation',
-    cooldown: 5,
-
     async execute(interaction, client, config, saveConfig) {
         const user = interaction.options.getUser('user');
         const reason = interaction.options.getString('reason');
@@ -25,12 +21,12 @@ module.exports = {
 
         if (!member) {
             return interaction.reply({ 
-                content: "❌ This user isn't in the server",
+                content: "❌ User not found in this server",
                 ephemeral: true 
             });
         }
 
-        // Initialize warns system if not exists
+        // Initialize warn system if needed
         if (!config.warns) config.warns = {};
         if (!config.warns[interaction.guild.id]) config.warns[interaction.guild.id] = {};
         if (!config.warns[interaction.guild.id][user.id]) {
@@ -40,13 +36,14 @@ module.exports = {
         // Add warning
         config.warns[interaction.guild.id][user.id].push({
             reason: reason,
-            moderator: interaction.user.id,
+            moderatorId: interaction.user.id,
             date: new Date().toISOString()
         });
         saveConfig();
 
         const warnCount = config.warns[interaction.guild.id][user.id].length;
 
+        // Create embed
         const embed = new EmbedBuilder()
             .setColor('#FFFF00')
             .setTitle('⚠ Warning Issued')
@@ -60,7 +57,7 @@ module.exports = {
 
         await interaction.reply({ embeds: [embed] });
 
-        // Try to DM the warned user
+        // Try to DM user
         try {
             await user.send(`You've received a warning in **${interaction.guild.name}**\nReason: ${reason}\nTotal warnings: ${warnCount}`);
         } catch {
